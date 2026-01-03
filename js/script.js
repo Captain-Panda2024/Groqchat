@@ -108,11 +108,6 @@ async function handleSend() {
     addMessageToHistory('user', text);
     renderMessage('user', text);
 
-    // Speak Prompt if needed (optional feature, but requested in spec: "Prompt reading")
-    if (state.autoSpeak) {
-        speakText(text); // Async/Parallel
-    }
-
     // API Call
     showLoading();
     
@@ -134,7 +129,6 @@ async function handleSend() {
         renderMessage('system', `Error: ${error.message}`);
     }
 }
-
 function addMessageToHistory(role, content) {
     state.history.push({ role, content });
     // Keep context window reasonable? Groq handles large contexts, but let's be safe if it gets huge.
