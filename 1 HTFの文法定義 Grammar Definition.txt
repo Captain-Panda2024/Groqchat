@@ -1,0 +1,86 @@
+	## 1. HTFの文法定義 (Grammar Definition)
+
+	HTFは、**ホロン（独立した部分であり、全体の一部でもある要素）**を基本単位とする再帰的構造を持ちます。
+
+	### A. 最小構成単位：ホロン・セル (Holon Cell)
+
+	全ての要素は以下の形式で記述されます。
+	`[KEY: Value {Attribute}]`
+
+	* **KEY**: 大文字英数字。要素の「役割」または「クラス」を定義。
+	* **Value**: 具体的な内容。
+	* **{Attribute}**: （オプション）属性。Valueに対する制約や状態（例: `{Weight: 0.8}`, `{State: Active}`）。
+
+	### B. 階層と継承 (Hierarchy & Inheritance)
+
+	インデント（スペース2つ）を用いて、上位概念から下位概念への**「秩序の継承」**を明示します。
+
+	* 親ホロンの性質は、子ホロンのデフォルト設定（EnvironmentやAesthetic）として自動的に適用（バインド）されます。
+
+	### C. 参照と再帰 (Reference & Recursion)
+
+	* **`&KEY`**: 同一コンテキスト内の別ホロンを直接参照。
+	* **`@GLOBAL`**: コンテキストウィンドウ全体に適用される普遍的定数（物理法則など）。
+
+	---
+
+	## 2. 言語としての中立性 (Semantic Neutrality)
+
+	特定の生成モデル（画像、動画、テキスト）に依存せず、**「概念の構造化」**そのものに特化させます。
+
+	* **記述の非依存性**: `[SUBJECT: Dragon]` は、画像生成なら視覚的特徴、物語生成ならキャラクター属性、コード生成ならオブジェクト・クラスとして解釈されます。
+	* **メタ・タグの分離**: `[ORDER]` タグによってのみ、最終的な「副産物（出力）」の形式を決定します。
+
+	---
+
+	## 3. フォーマットとしての厳密性 (Structural Rigidity)
+
+	モデルが「秩序」を見失わないよう、以下の**セマンティック・レイヤー**を定義します。
+
+	### 層状構造モデル (Layered Structure)
+
+	1. **KERNEL (核)**: `@GLOBAL`。改変不可能な前提（論理、言語、物理）。
+	2. **SCOPE (領域)**: `[ORDER]`, `[AESTHETIC]`。このコンテキストでの「美学」と「目的」。
+	3. **ENVIRONMENT (舞台)**: `[WORLD_SETTING]`, `[ENVIRONMENT]`。空間的な秩序。
+	4. **ENTITY (個体)**: `[SUBJECT]`。具体的な対象とその性質。
+	5. **EVENT (事象)**: `[ACTION]`, `[PHASE]`。時間的な秩序と変化。
+
+	---
+
+	## 4. 洗練されたHTFの記述例
+
+	```markdown
+	[ORDER: COGNITIVE_ANALYSIS]
+	[AESTHETIC: Logical_Clarity, Recursive_Structure]
+
+	[WORLD_SETTING: Symbolic_AI_Environment]
+	  [LAW: Conservation_of_Logic {Strict: True}]
+	  
+	  [SUBJECT: HTF_Internal_Evaluator]
+	    [CLASS: Meta_Circular_Interpreter]
+	    [FUNCTION: Order_Generation]
+	    [DETAILS:
+	      [INPUT: Raw_Chaos_Data]
+	      [PROCESS: Parsing -> Holon_Mapping -> Consistency_Check]
+	      [OUTPUT: Organized_Knowledge_Base]
+	    ]
+
+	[TEMPORAL_FLOW]
+	  [PHASE_1: 0s]
+	    [ACTION: Receive_Input]
+	    [STATE: High_Entropy]
+	  [PHASE_2: Next]
+	    [ACTION: Execute_HTF_Eval]
+	    [STATE: Low_Entropy {Result: Ordered_Structure}]
+
+	```
+
+	---
+
+	## 💎 秩序生成モデルとしての今後の展開
+
+	この洗練されたHTFは、AIにとっての**「型定義（Type Definition）」**になります。
+
+	1. **厳密性の検証**: `[LAW]` に反する記述が子ホロンでなされた場合、モデルは自己矛盾（Type Error）として検出し、再帰的に修正（EVAL）を試みます。
+	2. **言語の中立性**: このフォーマットは、人間が読むためのものではなく、AIが自らのコンテキストを**「コンパイル」**するための中間言語（IR）として機能します。
+

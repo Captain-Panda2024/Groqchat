@@ -1,4 +1,12 @@
-// Constants
+/**
+ * Groqchat - HTF Instruction Builder Logic
+ * * PHASES:
+ * 1. TOPIC_SETTING: ユーザーが解決したい課題（題目）を入力するフェーズ。
+ * 2. HTF_DISCUSSION: AIと対話しながら、HTF形式のインストラクションを構築するフェーズ。
+ * 3. FINAL_EXECUTION: 構築されたHTFをシステム命令として、最終回答を得るフェーズ。
+ */
+
+// 定数定義
 const MODELS = [
     { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
     { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' },
@@ -8,16 +16,34 @@ const MODELS = [
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// State
+// AIに教え込むHTFの文法定義
+const HTF_GRAMMAR = `
+## HTF Grammar Definition (Holonic Text Format)
+- Format: [KEY: Value {Attribute}]
+- Hierarchy: 2つのスペースによるインデントで継承を示す。
+- Layers:
+  1. KERNEL: @GLOBAL (不変の法則)
+  2. SCOPE: [ORDER], [AESTHETIC] (目的と美学)
+  3. ENVIRONMENT: [WORLD_SETTING], [LAW] (環境と制約)
+  4. ENTITY: [SUBJECT], [CLASS], [FUNCTION] (個体と機能)
+  5. EVENT: [ACTION], [PHASE] (時間的秩序)
+- Reference: &KEY で他のホロンを参照。
+- Goal: 与えられた題目に対し、この文法を用いて「認知の枠組み（インストラクション）」を構築すること。
+`;
+
+// アプリケーションの状態管理
 let state = {
     apiKey: '',
     model: MODELS[0].id,
-    history: [], // Array of {role, content}
+    phase: 'TOPIC_SETTING', // 'TOPIC_SETTING' | 'HTF_DISCUSSION' | 'FINAL_RESULT'
+    topic: '',
+    currentHTF: '',
+    history: [],
     autoSpeak: true,
     isSpeaking: false
 };
 
-// DOM Elements
+// DOM要素の参照
 const elements = {
     modelSelect: document.getElementById('model-select'),
     apiKeyInput: document.getElementById('api-key-input'),
@@ -26,13 +52,14 @@ const elements = {
     stopSpeechBtn: document.getElementById('stop-speech-btn'),
     chatContainer: document.getElementById('chat-container'),
     userInput: document.getElementById('user-input'),
-    sendBtn: document.getElementById('send-btn')
+    sendBtn: document.getElementById('send-btn'),
+    topicDisplay: document.getElementById('topic-display') || { textContent: '' }
 };
 
-// --- Initialization ---
+// --- 初期化 ---
 
 function init() {
-    // Populate Models
+    // モデル選択肢の生成
     MODELS.forEach(m => {
         const option = document.createElement('option');
         option.value = m.id;
@@ -40,14 +67,11 @@ function init() {
         elements.modelSelect.appendChild(option);
     });
 
-    // Load Settings
+    // 設定の読み込み
     const savedKey = localStorage.getItem('groq_api_key');
     if (savedKey) {
         state.apiKey = savedKey;
-        elements.apiKeyInput.value = savedKey; // Keep hidden but filled? Or just use state.
-        // For UI feedback, let's show it masked if possible, or just imply it's loaded.
-        // Actually, for security, usually we don't auto-fill the input if it's strictly secret, 
-        // but for a local tool it's fine.
+        elements.apiKeyInput.value = savedKey;
     }
 
     const savedModel = localStorage.getItem('groq_model');
@@ -56,7 +80,7 @@ function init() {
         elements.modelSelect.value = savedModel;
     }
 
-    // Event Listeners
+    // イベントリスナーの設定
     elements.saveKeyBtn.addEventListener('click', saveApiKey);
     elements.modelSelect.addEventListener('change', (e) => {
         state.model = e.target.value;
@@ -74,13 +98,11 @@ function init() {
         }
     });
 
-    // Check for "Enter" in API key input to save
-    elements.apiKeyInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') saveApiKey();
-    });
+    // 開始メッセージ
+    renderSystemMessage("解決したい課題（題目）を入力してください。これをタイトルとしてプロジェクトを開始します。");
 }
 
-// --- Logic ---
+// --- ロジック ---
 
 function saveApiKey() {
     const key = elements.apiKeyInput.value.trim();
@@ -97,29 +119,31 @@ async function handleSend() {
     const text = elements.userInput.value.trim();
     if (!text) return;
     if (!state.apiKey) {
-        alert('Please set your Groq API Key first.');
+        alert('Groq APIキーを設定してください。');
         return;
     }
 
-    // Clear input
     elements.userInput.value = '';
 
-    // Add User Message
+    // 題目設定フェーズ
+    if (state.phase === 'TOPIC_SETTING') {
+        setTopic(text);
+        return;
+    }
+
+    // 協議フェーズの通常チャット
     addMessageToHistory('user', text);
     renderMessage('user', text);
 
-    // API Call
     showLoading();
     
     try {
         const responseText = await fetchGroqCompletion();
         removeLoading();
         
-        // Add AI Message
         addMessageToHistory('assistant', responseText);
         renderMessage('assistant', responseText);
 
-        // Speak Response
         if (state.autoSpeak) {
             speakText(responseText);
         }
@@ -129,17 +153,48 @@ async function handleSend() {
         renderMessage('system', `Error: ${error.message}`);
     }
 }
+
+function setTopic(text) {
+    state.topic = text;
+    state.phase = 'HTF_DISCUSSION';
+    
+    // UI更新
+    if (elements.topicDisplay) {
+        elements.topicDisplay.textContent = `Topic: ${text}`;
+    }
+    
+    renderMessage('user', `題目: ${text}`);
+    renderSystemMessage(`題目を「${text}」に設定しました。これからこの課題を解決するためのHTFインストラクションを構築します。AIと相談しながら文脈を固めていきましょう。`);
+    
+    // AIへの最初の命令（コンサルテーション開始）
+    addMessageToHistory('user', `題目は「${text}」です。この課題を解決するために、HTF文法を用いてどのような[SCOPE]や[ENVIRONMENT]、[ENTITY]を定義すべきか、私に質問しながら協議を開始してください。`);
+    handleDiscussionStart();
+}
+
+async function handleDiscussionStart() {
+    showLoading();
+    try {
+        const responseText = await fetchGroqCompletion();
+        removeLoading();
+        addMessageToHistory('assistant', responseText);
+        renderMessage('assistant', responseText);
+        if (state.autoSpeak) speakText(responseText);
+    } catch (error) {
+        removeLoading();
+        renderMessage('system', `Error: ${error.message}`);
+    }
+}
+
 function addMessageToHistory(role, content) {
     state.history.push({ role, content });
-    // Keep context window reasonable? Groq handles large contexts, but let's be safe if it gets huge.
-    // For now, keep all.
 }
 
 async function fetchGroqCompletion() {
-    // Construct messages payload.
-    // We can add a system prompt if we want.
+    // フェーズに応じたシステムプロンプトの構成
+    let systemContent = `あなたはHTF（Holonic Text Format）の専門家であり、ユーザーの課題解決を支援するコンサルタントです。\n${HTF_GRAMMAR}\n現在は「協議フェーズ」です。ユーザーの「題目：${state.topic}」に対し、最適な秩序を生成するためのHTF構造を提案してください。`;
+    
     const messages = [
-        { role: 'system', content: 'You are a helpful AI assistant. Answer concisely and clearly.' },
+        { role: 'system', content: systemContent },
         ...state.history
     ];
 
@@ -153,7 +208,7 @@ async function fetchGroqCompletion() {
             model: state.model,
             messages: messages,
             temperature: 0.7,
-            max_tokens: 1024
+            max_tokens: 2048
         })
     });
 
@@ -166,34 +221,34 @@ async function fetchGroqCompletion() {
     return data.choices[0].message.content;
 }
 
-// --- UI ---
+// --- UI操作 ---
 
 function renderMessage(role, content) {
-    // Remove welcome message if exists
     const welcome = document.querySelector('.welcome-message');
     if (welcome) welcome.remove();
 
     const div = document.createElement('div');
     div.classList.add('message', role === 'assistant' ? 'ai' : (role === 'system' ? 'system' : 'user'));
     
-    // Simple text content handling (could add markdown parsing here later)
-    // For now, just whitespace preserving
+    // テキスト表示の整形
     div.style.whiteSpace = 'pre-wrap';
     div.textContent = content;
 
-    // Controls for the message (Re-speak button)
+    // 個別の読み上げボタン
     const controls = document.createElement('div');
     controls.classList.add('message-controls');
-    
     const speakBtn = document.createElement('button');
     speakBtn.textContent = '🔊';
     speakBtn.onclick = () => speakText(content);
-    
     controls.appendChild(speakBtn);
     div.appendChild(controls);
 
     elements.chatContainer.appendChild(div);
     elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+}
+
+function renderSystemMessage(content) {
+    renderMessage('system', content);
 }
 
 function showLoading() {
@@ -210,55 +265,28 @@ function removeLoading() {
     if (div) div.remove();
 }
 
-// --- TTS ---
+// --- 音声合成 (TTS) ---
 
 function speakText(text) {
-    window.speechSynthesis.cancel(); // Stop current
-
-    // Clean text: remove markdown symbols like #, *, `
-    const cleanText = text.replace(/[*#`]/g, '');
+    window.speechSynthesis.cancel();
+    
+    // 読み上げ前に不要な記号や思考プロセスをカット
+    const cleanText = text
+        .replace(/<think>[\s\S]*?<\/think>/g, '') // DeepSeekの思考プロセスをスキップ
+        .replace(/[*#`]/g, ''); // Markdown記号をカット
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     
-    // Simple language detection
-    // If it contains Hiragana or Katakana, assume JP. Else EN.
+    // 日本語が含まれているか判定
     const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF]/.test(cleanText);
     utterance.lang = hasJapanese ? 'ja-JP' : 'en-US';
     
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => {
-        state.isSpeaking = true;
-        updateStopButton();
-    };
-
-    utterance.onend = () => {
-        state.isSpeaking = false;
-        updateStopButton();
-    };
-
-    utterance.onerror = (e) => {
-        console.error('TTS Error:', e);
-        state.isSpeaking = false;
-        updateStopButton();
-    };
-
     window.speechSynthesis.speak(utterance);
 }
 
 function stopSpeaking() {
     window.speechSynthesis.cancel();
-    state.isSpeaking = false;
-    updateStopButton();
 }
 
-function updateStopButton() {
-    // Visual feedback if needed
-    // elements.stopSpeechBtn.disabled = !state.isSpeaking; 
-    // Actually, always enabled is fine to ensure force stop.
-}
-
-// Run
+// 実行
 init();
