@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq TTS Chat</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Icon library if needed, but keeping it simple -->
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Groq TTS Chat</h1>
+            <div class="controls">
+                <select id="model-select" aria-label="モデル選択">
+                    <!-- Options populated by JS -->
+                </select>
+                <input type="password" id="api-key-input" placeholder="Groq API Key" aria-label="API Key">
+                <button id="save-key-btn">Save Key</button>
+            </div>
+        </div>
+        <div class="audio-controls">
+            <label class="toggle-switch">
+                <input type="checkbox" id="auto-speak-toggle" checked>
+                <span class="slider"></span>
+                <span class="label-text">Auto Read</span>
+            </label>
+            <button id="stop-speech-btn" class="icon-btn" aria-label="読み上げ停止">⏹️ Stop</button>
+        </div>
+    </header>
+
+    <main id="chat-container">
+        <!-- Messages will be injected here -->
+        <div class="welcome-message">
+            <p>Groq API Keyを入力してチャットを開始してください。</p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="input-area">
+            <textarea id="user-input" placeholder="メッセージを入力..." rows="2"></textarea>
+            <button id="send-btn" aria-label="送信">➤</button>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

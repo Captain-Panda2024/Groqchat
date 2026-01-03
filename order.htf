@@ -1,0 +1,26 @@
+[KERNEL: @GLOBAL_WEB_STANDARDS]
+
+[SCOPE: GROQ_TTS_CHAT_APP]
+  [AESTHETIC: Simple, High_Contrast, Responsive]
+  [ORDER: User_Interaction, AI_Inference, Audio_Feedback]
+
+[ENVIRONMENT: Browser_Client_Side]
+  [LAW: No_Backend_Server {Strict: True}]
+  [LAW: API_Key_In_LocalStorage {Security: Low_Risk_Personal_Use}]
+  [LAW: Web_Speech_API_Usage]
+
+[ENTITY: UI_Manager]
+  [FUNCTION: Render_Chat_History]
+  [FUNCTION: Handle_User_Input]
+
+[ENTITY: Groq_Client]
+  [FUNCTION: Fetch_Completion]
+  [CONST: Models [llama-3.3-70b-versatile, llama-3.1-8b-instant, deepseek-r1-distill-llama-70b, deepseek-r1-distill-qwen-32b]]
+
+[ENTITY: TTS_Engine]
+  [FUNCTION: Speak_Text]
+  [FUNCTION: Manage_Queue]
+
+[TEMPORAL_FLOW]
+  [PHASE: Init] -> [PHASE: Idle]
+  [PHASE: User_Input] -> [PHASE: API_Request] -> [PHASE: AI_Response] -> [PHASE: TTS_Playback] -> [PHASE: Idle]
